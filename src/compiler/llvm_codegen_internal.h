@@ -93,6 +93,7 @@ typedef struct GenContext_
 	const char *ir_filename;
 	const char *object_filename;
 	const char *asm_filename;
+	const char *passes;
 	LLVMTypeRef bool_type;
 	LLVMTypeRef byte_type;
 	LLVMTypeRef introspect_type;
@@ -277,6 +278,9 @@ typedef struct
 	unsigned optnone;         // No optimization
 	unsigned readonly;        // No reads on pointer
 	unsigned reassoc;         // allow reassociateion
+	unsigned sanitize_address; // enable address sanitizer (address)
+	unsigned sanitize_memory;  // enable address sanitizer (memory)
+	unsigned sanitize_thread;  // enable address sanitizer (thread)
 	unsigned sext;            // sign extend
 	unsigned sret;            // struct return pointer
 	unsigned ssp;             // safe stack protection
