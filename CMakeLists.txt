@@ -227,20 +227,20 @@ set(lld_libs
 
 if (APPLE)
     set(lld_libs ${lld_libs} xar)
-    find_file(ASAN_STATIC NAMES libclang_rt.asan_abi_osx.a PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
-    find_file(UBSAN_STATIC NAMES libclang_rt.ubsan_minimal_osx.a PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
-    find_file(TSAN_DYNAMIC NAMES libclang_rt.tsan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
-    find_file(LSAN_DYNAMIC NAMES libclang_rt.lsan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
-    find_file(UBSAN_DYNAMIC NAMES libclang_rt.ubsan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
-    find_file(ASAN_DYNAMIC NAMES libclang_rt.asan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
+    find_file(RT_ASAN_STATIC NAMES libclang_rt.asan_abi_osx.a PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
+    find_file(RT_ASAN_DYNAMIC NAMES libclang_rt.asan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
+    find_file(RT_UBSAN_STATIC NAMES libclang_rt.ubsan_minimal_osx.a PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
+    find_file(RT_UBSAN_DYNAMIC NAMES libclang_rt.ubsan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
+    find_file(RT_TSAN_DYNAMIC NAMES libclang_rt.tsan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
+    find_file(RT_LSAN_DYNAMIC NAMES libclang_rt.lsan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
     set(sanitizer_runtime_libraries
-            ${ASAN_STATIC}
-            ${UBSAN_STATIC}
-            ${TSAN_DYNAMIC}
-            ${LSAN_DYNAMIC}
-            ${UBSAN_DYNAMIC}
-            ${ASAN_DYNAMIC})
-endif ()
+            ${RT_ASAN_STATIC}
+            ${RT_ASAN_DYNAMIC}
+            ${RT_UBSAN_STATIC}
+            ${RT_UBSAN_DYNAMIC}
+            ${RT_TSAN_DYNAMIC}
+            ${RT_LSAN_DYNAMIC})
+endif()
 
 message(STATUS "linking to llvm libs ${lld_libs}")
 message(STATUS "Found lld libs ${lld_libs}")
@@ -437,11 +437,6 @@ if(MSVC)
         ${clang_lib_dir}/clang_rt.asan_dynamic-x86_64.lib
         ${clang_lib_dir}/clang_rt.asan_dynamic-x86_64.dll
         ${clang_lib_dir}/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib)
-    add_custom_command(TARGET c3c POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E rm -r -- $<TARGET_FILE_DIR:c3c>/c3c_rt
-        COMMAND "${CMAKE_COMMAND}" -E make_directory $<TARGET_FILE_DIR:c3c>/c3c_rt
-        COMMAND "${CMAKE_COMMAND}" -E copy ${sanitizer_runtime_libraries} $<TARGET_FILE_DIR:c3c>/c3c_rt
-        COMMENT "Copying sanitizer runtime libraries to output directory")
 else()
     message(STATUS "using gcc/clang warning switches")
     target_link_options(c3c PRIVATE -pthread)
@@ -456,6 +451,11 @@ install(TARGETS c3c DESTINATION bin)
 install(DIRECTORY lib/ DESTINATION lib/c3)
 
 if (DEFINED sanitizer_runtime_libraries)
+    add_custom_command(TARGET c3c POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E rm -rf -- $<TARGET_FILE_DIR:c3c>/c3c_rt
+        COMMAND "${CMAKE_COMMAND}" -E make_directory $<TARGET_FILE_DIR:c3c>/c3c_rt
+        COMMAND "${CMAKE_COMMAND}" -E copy ${sanitizer_runtime_libraries} $<TARGET_FILE_DIR:c3c>/c3c_rt
+        COMMENT "Copying sanitizer runtime libraries to output directory")
     install(DIRECTORY c3c_rt/ DESTINATION bin/c3c_rt)
 endif()
 

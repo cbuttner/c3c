@@ -201,6 +201,20 @@ static void linker_setup_windows(const char ***args_ref, Linker linker_type)
 
 static void linker_setup_macos(const char ***args_ref, Linker linker_type)
 {
+	if (compiler.build.feature.sanitize_address)
+	{
+		const char *compiler_path = find_executable_path();
+		// TODO Only dynamic linking seems to work
+		if (1)
+		{
+			add_arg(file_append_path(compiler_path, "c3c_rt/libclang_rt.asan_osx_dynamic.dylib"));
+		}
+		else
+		{
+			add_arg(file_append_path(compiler_path, "c3c_rt/libclang_rt.asan_abi_osx.a"));
+		}
+	}
+
 	if (linker_type == LINKER_CC)
 	{
 		add_arg("-target");
@@ -536,7 +550,7 @@ static bool linker_setup(const char ***args_ref, const char **files_to_link, uns
 			break;
 	}
 
-	if (compiler.platform.os != OS_TYPE_WIN32)
+	if (compiler.platform.os == OS_TYPE_LINUX)
 	{
 		if (compiler.build.feature.sanitize_address) add_arg("-fsanitize=address");
 		if (compiler.build.feature.sanitize_memory) add_arg("-fsanitize=memory");
