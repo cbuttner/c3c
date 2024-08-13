@@ -1058,12 +1058,12 @@ static void execute_scripts(void)
 		if (call.len < 3 || call.ptr[call.len - 3] != '.' || call.ptr[call.len - 2] != 'c' ||
 		    call.ptr[call.len - 2] != '3')
 		{
-			(void) execute_cmd(exec, false);
+			(void) execute_cmd(exec, false, NULL);
 			continue;
 		}
 		scratch_buffer_clear();
 		scratch_buffer_append_len(call.ptr, call.len);
-		(void) compile_and_invoke(scratch_buffer_to_string(), execs.len ? execs.ptr : "");
+		(void) compile_and_invoke(scratch_buffer_to_string(), execs.len ? execs.ptr : "", NULL);
 	}
 	dir_change(old_path);
 	free(old_path);
@@ -1247,7 +1247,7 @@ const char *scratch_buffer_interned_as(TokenType* type)
 	                  fnv1a(scratch_buffer.str, scratch_buffer.len), type);
 }
 
-File *compile_and_invoke(const char *file, const char *args)
+File *compile_and_invoke(const char *file, const char *args, const char *stdin_data)
 {
 	char *name;
 	if (!file_namesplit(compiler_exe_name, &name, NULL))
@@ -1255,9 +1255,9 @@ File *compile_and_invoke(const char *file, const char *args)
 		error_exit("Failed to extract file name from '%s'", compiler_exe_name);
 	}
 	const char *compiler_path = file_append_path(find_executable_path(), name);
-	scratch_buffer_clear();
-	scratch_buffer_append(compiler_path);
-#if (_MSC_VER)
+	scratch_buffer_printf("\"%s\"", compiler_path);
+#if PLATFORM_WINDOWS
+	file_path_convert_to_win_separator(scratch_buffer_to_string());
 	const char *output = "__c3exec__.exe";
 #else
 	const char *output = "__c3exec__";
@@ -1268,12 +1268,19 @@ File *compile_and_invoke(const char *file, const char *args)
 	{
 		StringSlice file_name = slice_next_token(&slice, ';');
 		if (!file_name.len) continue;
-		scratch_buffer_append_char(' ');
+		scratch_buffer_append(" \"");
+		char *start = &scratch_buffer.str[scratch_buffer.len];
+		(void)start;
 		scratch_buffer_append_len(file_name.ptr, file_name.len);
+		scratch_buffer_to_string();
+#if PLATFORM_WINDOWS
+		file_path_convert_to_win_separator(start);
+#endif
+		scratch_buffer_append("\"");
 	}
 	scratch_buffer_printf(" -o %s", output);
 	const char *out;
-	if (!execute_cmd_failable(scratch_buffer_to_string(), &out))
+	if (!execute_cmd_failable(scratch_buffer_to_string(), &out, NULL))
 	{
 		error_exit("Failed to compile script '%s'.", file);
 	}
@@ -1285,7 +1292,7 @@ File *compile_and_invoke(const char *file, const char *args)
 	scratch_buffer_append(output);
 	scratch_buffer_append(" ");
 	scratch_buffer_append(args);
-	if (!execute_cmd_failable(scratch_buffer_to_string(), &out))
+	if (!execute_cmd_failable(scratch_buffer_to_string(), &out, stdin_data))
 	{
 		error_exit("Error invoking script '%s' with arguments %s.", file, args);
 	}

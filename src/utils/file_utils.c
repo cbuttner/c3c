@@ -474,6 +474,15 @@ bool file_exists(const char *path)
 	return S_ISDIR(st.st_mode) || S_ISREG(st.st_mode) || S_ISREG(st.st_mode);
 }
 
+void file_path_convert_to_win_separator(char *path)
+{
+	while (path[0] != '\0')
+	{
+		if (path[0] == '/') path[0] = '\\';
+		path++;
+	}
+}
+
 const char *file_append_path(const char *path, const char *name)
 {
 	size_t path_len = strlen(path);
@@ -505,7 +514,7 @@ void file_delete_all_files_in_dir_with_suffix(const char *path, const char *suff
 #else
 	const char *cmd = "rm -f %s/*%s";
 #endif
-	execute_cmd(str_printf(cmd, path, suffix), true);
+	execute_cmd(str_printf(cmd, path, suffix), true, NULL);
 }
 
 #if (_MSC_VER)
@@ -591,64 +600,41 @@ void file_add_wildcard_files(const char ***files, const char *path, bool recursi
 #endif
 
 #define BUFSIZE 1024
-const char *execute_cmd(const char *cmd, bool ignore_failure)
+const char *execute_cmd(const char *cmd, bool ignore_failure, const char *stdin_string)
 {
-	char buffer[BUFSIZE];
-	char *output = "";
-	FILE *process = NULL;
-#if (_MSC_VER)
-	if (!(process = _wpopen(win_utf8to16(cmd), L"r")))
-	{
-		if (ignore_failure) return "";
-		error_exit("Failed to open a pipe for command '%s'.", cmd);
-	}
-#else
-	if (!(process = popen(cmd, "r")))
-	{
-		if (ignore_failure) return "";
-		error_exit("Failed to open a pipe for command '%s'.", cmd);
-	}
-#endif
-	while (fgets(buffer, BUFSIZE - 1, process))
-	{
-		output = str_cat(output, buffer);
-	}
-#if PLATFORM_WINDOWS
-	int err = _pclose(process);
-#else
-	int err = pclose(process);
-#endif
-	if (err)
+	const char *result = NULL;
+	bool success = execute_cmd_failable(cmd, &result, stdin_string);
+	if (!success)
 	{
 		if (ignore_failure) return "";
 		error_exit("Failed to execute '%s'.", cmd);
 	}
-
-	while (output[0] != 0)
-	{
-		switch (output[0])
-		{
-			case ' ':
-			case '\t':
-			case '\n':
-			case '\r':
-				output++;
-				continue;
-			default:
-				break;
-		}
-		break;
-	}
-	return str_trim(output);
+	return result;
 }
 
-bool execute_cmd_failable(const char *cmd, const char **result)
+bool execute_cmd_failable(const char *cmd, const char **result, const char *stdin_string)
 {
 	char buffer[BUFSIZE];
 	char *output = "";
 	FILE *process = NULL;
+	FILE *stdin_file = NULL;
+	if (stdin_string)
+	{
+		cmd = strdup(cmd);
+		scratch_buffer_clear();
 #if (_MSC_VER)
-	if (!(process = _wpopen(win_utf8to16(cmd), L"r"))) return false;
+		scratch_buffer_printf("%s < __c3temp.bin", cmd);
+#else
+		scratch_buffer_printf("cat __c3temp.bin | %s", cmd);
+#endif
+		free((char*)cmd);
+		cmd = scratch_buffer_to_string();
+		FILE *f = fopen("__c3temp.bin", "w");
+		fputs(stdin_string, f);
+		fclose(f);
+	}
+#if (_MSC_VER)
+	if (!(process = _wpopen(win_utf8to16(cmd), L"rb"))) return false;
 #else
 	if (!(process = popen(cmd, "r"))) return false;
 #endif
