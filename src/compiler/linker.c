@@ -1,4 +1,5 @@
 #include "compiler_internal.h"
+#include "../utils/whereami.h"
 #include "c3_llvm.h"
 
 #if PLATFORM_POSIX
@@ -137,45 +138,64 @@ static void linker_setup_windows(const char ***args_ref, Linker linker_type)
 	linking_add_link(&compiler.linking, "Ws2_32");
 	linking_add_link(&compiler.linking, "legacy_stdio_definitions");
 
+	WinCrtLinking crt_linking = compiler.build.win.crt_linking;
 	// Do not link any.
-	if (compiler.build.win.crt_linking == WIN_CRT_NONE) return;
+	if (crt_linking == WIN_CRT_NONE) return;
 
-	if (compiler.build.win.crt_linking == WIN_CRT_STATIC)
-	{
-		if (is_debug)
-		{
-			linking_add_link(&compiler.linking, "libucrtd");
-			linking_add_link(&compiler.linking, "libvcruntimed");
-			linking_add_link(&compiler.linking, "libcmtd");
-			linking_add_link(&compiler.linking, "libcpmtd");
-		}
-		else
-		{
-			linking_add_link(&compiler.linking, "libucrt");
-			linking_add_link(&compiler.linking, "libvcruntime");
-			linking_add_link(&compiler.linking, "libcmt");
-			linking_add_link(&compiler.linking, "libcpmt");
-		}
-	}
-	else
+	if (crt_linking == WIN_CRT_DEFAULT)
 	{
 		// When cross compiling we might not have the relevant debug libraries.
 		// if so, then exclude them.
-		if (is_debug && link_with_dynamic_debug_libc)
+		crt_linking = is_debug && link_with_dynamic_debug_libc ? WIN_CRT_DYNAMIC_DEBUG : WIN_CRT_DYNAMIC;
+	}
+
+	if (crt_linking == WIN_CRT_STATIC_DEBUG)
+	{
+		linking_add_link(&compiler.linking, "libucrtd");
+		linking_add_link(&compiler.linking, "libvcruntimed");
+		linking_add_link(&compiler.linking, "libcmtd");
+		linking_add_link(&compiler.linking, "libcpmtd");
+	}
+	else if (crt_linking == WIN_CRT_STATIC)
+	{
+		linking_add_link(&compiler.linking, "libucrt");
+		linking_add_link(&compiler.linking, "libvcruntime");
+		linking_add_link(&compiler.linking, "libcmt");
+		linking_add_link(&compiler.linking, "libcpmt");
+	}
+	else if (crt_linking == WIN_CRT_DYNAMIC_DEBUG)
+	{
+		linking_add_link(&compiler.linking, "ucrtd");
+		linking_add_link(&compiler.linking, "vcruntimed");
+		linking_add_link(&compiler.linking, "msvcrtd");
+		linking_add_link(&compiler.linking, "msvcprtd");
+	}
+	else
+	{
+		linking_add_link(&compiler.linking, "ucrt");
+		linking_add_link(&compiler.linking, "vcruntime");
+		linking_add_link(&compiler.linking, "msvcrt");
+		linking_add_link(&compiler.linking, "msvcprt");
+	}
+
+	if (compiler.build.feature.sanitize_address)
+	{
+		const char *compiler_path = find_executable_path();
+		if (compiler.build.win.crt_linking == WIN_CRT_STATIC)
 		{
-			linking_add_link(&compiler.linking, "ucrtd");
-			linking_add_link(&compiler.linking, "vcruntimed");
-			linking_add_link(&compiler.linking, "msvcrtd");
-			linking_add_link(&compiler.linking, "msvcprtd");
+			add_arg2(compiler_path, "c3c_rt/clang_rt.asan-x86_64.lib");
 		}
 		else
 		{
-			linking_add_link(&compiler.linking, "ucrt");
-			linking_add_link(&compiler.linking, "vcruntime");
-			linking_add_link(&compiler.linking, "msvcrt");
-			linking_add_link(&compiler.linking, "msvcprt");
+			add_arg2(compiler_path, "c3c_rt/clang_rt.asan_dynamic-x86_64.lib");
+			add_arg2(compiler_path, "c3c_rt/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib");
+			const char *dll_path = file_append_path(compiler_path, "c3c_rt/clang_rt.asan_dynamic-x86_64.dll");
+			const char *dst_path = file_append_path(compiler.build.output_dir, "clang_rt.asan_dynamic-x86_64.dll");
+			DEBUG_LOG("Copying %s to %s\n", dll_path, dst_path);
+			file_copy_file(dll_path, dst_path, true);
 		}
 	}
+
 	add_arg("/NOLOGO");
 }
 
@@ -515,6 +535,14 @@ static bool linker_setup(const char ***args_ref, const char **files_to_link, uns
 		case OS_TYPE_NONE:
 			break;
 	}
+
+	if (compiler.platform.os != OS_TYPE_WIN32)
+	{
+		if (compiler.build.feature.sanitize_address) add_arg("-fsanitize=address");
+		if (compiler.build.feature.sanitize_memory) add_arg("-fsanitize=memory");
+		if (compiler.build.feature.sanitize_thread) add_arg("-fsanitize=thread");
+	}
+
 	for (unsigned i = 0; i < file_count; i++)
 	{
 		add_arg(files_to_link[i]);
