@@ -208,6 +208,7 @@ static void linker_setup_macos(const char ***args_ref, Linker linker_type)
 		if (1)
 		{
 			add_arg(file_append_path(compiler_path, "c3c_rt/libclang_rt.asan_osx_dynamic.dylib"));
+			add_arg2("-Wl,-rpath ", file_append_path(compiler_path, "c3c_rt"));
 		}
 		else
 		{

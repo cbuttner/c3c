@@ -455,7 +455,16 @@ if (DEFINED sanitizer_runtime_libraries)
         COMMAND "${CMAKE_COMMAND}" -E rm -rf -- $<TARGET_FILE_DIR:c3c>/c3c_rt
         COMMAND "${CMAKE_COMMAND}" -E make_directory $<TARGET_FILE_DIR:c3c>/c3c_rt
         COMMAND "${CMAKE_COMMAND}" -E copy ${sanitizer_runtime_libraries} $<TARGET_FILE_DIR:c3c>/c3c_rt
+        VERBATIM
         COMMENT "Copying sanitizer runtime libraries to output directory")
+
+    if (APPLE)
+        # Change LC_ID_DYLIB to be rpath-based instead of having an absolute path
+        add_custom_command(TARGET c3c POST_BUILD
+            COMMAND find $<TARGET_FILE_DIR:c3c>/c3c_rt -type f -name "*.dylib" -execdir ${LLVM_TOOLS_BINARY_DIR}/llvm-install-name-tool -id @rpath/{} {} $<SEMICOLON>
+            VERBATIM)
+    endif()
+
     install(DIRECTORY c3c_rt/ DESTINATION bin/c3c_rt)
 endif()
 
