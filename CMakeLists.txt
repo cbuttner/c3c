@@ -437,6 +437,11 @@ if(MSVC)
         ${clang_lib_dir}/clang_rt.asan_dynamic-x86_64.lib
         ${clang_lib_dir}/clang_rt.asan_dynamic-x86_64.dll
         ${clang_lib_dir}/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib)
+    add_custom_command(TARGET c3c POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E rm -r -- $<TARGET_FILE_DIR:c3c>/c3c_rt
+        COMMAND "${CMAKE_COMMAND}" -E make_directory $<TARGET_FILE_DIR:c3c>/c3c_rt
+        COMMAND "${CMAKE_COMMAND}" -E copy ${sanitizer_runtime_libraries} $<TARGET_FILE_DIR:c3c>/c3c_rt
+        COMMENT "Copying sanitizer runtime libraries to output directory")
 else()
     message(STATUS "using gcc/clang warning switches")
     target_link_options(c3c PRIVATE -pthread)
@@ -446,18 +451,12 @@ else()
     target_compile_options(c3c PRIVATE -pthread -Wall -Werror -Wno-unknown-pragmas -Wno-unused-result
             -Wno-unused-function -Wno-unused-variable -Wno-unused-parameter)
 endif()
-if (DEFINED sanitizer_runtime_libraries)
-    message(STATUS "Copying sanitizer libraries: ${sanitizer_runtime_libraries}")
-    set(RT_DIR ${CMAKE_BINARY_DIR}/c3c_rt)
-    file(REMOVE_RECURSE ${RT_DIR})
-    file(COPY ${sanitizer_runtime_libraries} DESTINATION ${RT_DIR})
-endif ()
 
 install(TARGETS c3c DESTINATION bin)
 install(DIRECTORY lib/ DESTINATION lib/c3)
 
 if (DEFINED sanitizer_runtime_libraries)
-install(DIRECTORY c3c_rt/ DESTINATION bin/c3c_rt)
+    install(DIRECTORY c3c_rt/ DESTINATION bin/c3c_rt)
 endif()
 
 feature_summary(WHAT ALL)

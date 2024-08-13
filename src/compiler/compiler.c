@@ -1081,7 +1081,7 @@ static void check_sanitizer_options(BuildTarget *target)
 		{
 			case WINDOWS_X64:
 			{
-				WinCrtLinking crt_linking = active_target.win.crt_linking;
+				WinCrtLinking crt_linking = target->win.crt_linking;
 				if (crt_linking == WIN_CRT_DEFAULT)
 				{
 					error_exit("Please specify `static` or `debug` wincrt when using address sanitizer.");
@@ -1201,7 +1201,7 @@ void compile()
 	unit->module = compiler.context.core_module;
 	compiler.context.core_unit = unit;
 	target_setup(&compiler.build);
-	check_sanitizer_options(&active_target);
+	check_sanitizer_options(&compiler.build);
 	resolve_libraries(&compiler.build);
 	compiler.context.sources = compiler.build.sources;
 	FOREACH(LibraryTarget *, lib, compiler.build.ccompiling_libraries)
@@ -1239,9 +1239,9 @@ void compile()
 	setup_bool_define("BENCHMARKING", compiler.build.benchmarking);
 	setup_int_define("JMP_BUF_SIZE", jump_buffer_size(), type_int);
 	setup_bool_define("TESTING", compiler.build.testing);
-	setup_bool_define("ADDRESS_SANITIZER", active_target.feature.sanitize_address);
-	setup_bool_define("MEMORY_SANITIZER", active_target.feature.sanitize_memory);
-	setup_bool_define("THREAD_SANITIZER", active_target.feature.sanitize_thread);
+	setup_bool_define("ADDRESS_SANITIZER", compiler.build.feature.sanitize_address);
+	setup_bool_define("MEMORY_SANITIZER", compiler.build.feature.sanitize_memory);
+	setup_bool_define("THREAD_SANITIZER", compiler.build.feature.sanitize_thread);
 
 	type_init_cint();
 

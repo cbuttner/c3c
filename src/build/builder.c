@@ -495,6 +495,5 @@ void init_build_target(BuildTarget *target, BuildOptions *options)
 		if (!dir_make(target->build_dir)) error_exit("Failed to create build directory '%s'.", target->build_dir);
 		if (!file_is_dir(target->build_dir)) error_exit("Expected '%s' to be a directory.", target->build_dir);
 	}
-
 	load_library_files();
 }
