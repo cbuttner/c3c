@@ -495,7 +495,7 @@ void file_copy_file(const char *src_path, const char *dst_path, bool overwrite)
 	CopyFileW(win_utf8to16(src_path), win_utf8to16(dst_path), !overwrite);
 #else
 	const char *cmd = "cp %s %s %s";
-	execute_cmd(str_printf(cmd, !overwrite ? "--update=none" : "--update=all", src_path, dst_path), true);
+	execute_cmd(str_printf(cmd, !overwrite ? "--update=none" : "--update=all", src_path, dst_path), true, NULL);
 #endif
 }
 

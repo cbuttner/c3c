@@ -179,13 +179,13 @@ static void linker_setup_windows(const char ***args_ref, Linker linker_type)
 	}
 
 	// Link sanitizer runtime libraries
+	const char *compiler_path = find_executable_path();
 	const char *asan_dll_src_path = file_append_path(compiler_path, "c3c_rt/clang_rt.asan_dynamic-x86_64.dll");
 	const char *asan_dll_dst_path = file_append_path(compiler.build.output_dir, "clang_rt.asan_dynamic-x86_64.dll");
 	file_delete_file(asan_dll_dst_path);
 
 	if (compiler.build.feature.sanitize_address)
 	{
-		const char *compiler_path = find_executable_path();
 		if (compiler.build.win.crt_linking == WIN_CRT_STATIC)
 		{
 			add_arg2(compiler_path, "c3c_rt/clang_rt.asan-x86_64.lib");
