@@ -1084,19 +1084,13 @@ static void check_sanitizer_options(BuildTarget *target)
 				WinCrtLinking crt_linking = target->win.crt_linking;
 				if (crt_linking == WIN_CRT_DEFAULT)
 				{
-					error_exit("Please specify `static` or `debug` wincrt when using address sanitizer.");
+					error_exit("Please specify `static` or `debug` for `wincrt` when using address sanitizer.");
 				}
 
 				if (crt_linking == WIN_CRT_STATIC_DEBUG || crt_linking == WIN_CRT_DYNAMIC_DEBUG)
 				{
 					// We currently don't have ASan runtime libraries linked against debug CRT.
-					error_exit("Address sanitizer cannot be used when using `static-debug` or `dynamic-debug` wincrt. Please use `static` or `debug` instead.");
-				}
-
-				if (target->single_module != SINGLE_MODULE_ON)
-				{
-					// TODO Temporary?
-					error_exit("Address sanitizer requires a single-module build.");
+					error_exit("Address sanitizer cannot be used when using `static-debug` or `dynamic-debug` for `wincrt`. Please use `static` or `debug` instead.");
 				}
 				break;
 			}
