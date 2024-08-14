@@ -179,6 +179,10 @@ static void linker_setup_windows(const char ***args_ref, Linker linker_type)
 	}
 
 	// Link sanitizer runtime libraries
+	const char *asan_dll_src_path = file_append_path(compiler_path, "c3c_rt/clang_rt.asan_dynamic-x86_64.dll");
+	const char *asan_dll_dst_path = file_append_path(compiler.build.output_dir, "clang_rt.asan_dynamic-x86_64.dll");
+	file_delete_file(asan_dll_dst_path);
+
 	if (compiler.build.feature.sanitize_address)
 	{
 		const char *compiler_path = find_executable_path();
@@ -190,10 +194,8 @@ static void linker_setup_windows(const char ***args_ref, Linker linker_type)
 		{
 			add_arg2(compiler_path, "c3c_rt/clang_rt.asan_dynamic-x86_64.lib");
 			add_arg2(compiler_path, "c3c_rt/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib");
-			const char *dll_path = file_append_path(compiler_path, "c3c_rt/clang_rt.asan_dynamic-x86_64.dll");
-			const char *dst_path = file_append_path(compiler.build.output_dir, "clang_rt.asan_dynamic-x86_64.dll");
-			DEBUG_LOG("Copying %s to %s\n", dll_path, dst_path);
-			file_copy_file(dll_path, dst_path, true);
+			DEBUG_LOG("Copying '%s' to '%s'\n", asan_dll_src_path, asan_dll_dst_path);
+			file_copy_file(asan_dll_src_path, asan_dll_dst_path, true);
 		}
 	}
 
