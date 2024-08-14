@@ -227,19 +227,17 @@ set(lld_libs
 
 if (APPLE)
     set(lld_libs ${lld_libs} xar)
-    find_file(RT_ASAN_STATIC NAMES libclang_rt.asan_abi_osx.a PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
     find_file(RT_ASAN_DYNAMIC NAMES libclang_rt.asan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
-    find_file(RT_UBSAN_STATIC NAMES libclang_rt.ubsan_minimal_osx.a PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
-    find_file(RT_UBSAN_DYNAMIC NAMES libclang_rt.ubsan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
     find_file(RT_TSAN_DYNAMIC NAMES libclang_rt.tsan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
+    find_file(RT_UBSAN_DYNAMIC NAMES libclang_rt.ubsan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
     find_file(RT_LSAN_DYNAMIC NAMES libclang_rt.lsan_osx_dynamic.dylib PATHS "${LLVM_LIBRARY_DIRS}/clang/${LLVM_MAJOR_VERSION}/lib/darwin")
     set(sanitizer_runtime_libraries
-            ${RT_ASAN_STATIC}
             ${RT_ASAN_DYNAMIC}
-            ${RT_UBSAN_STATIC}
-            ${RT_UBSAN_DYNAMIC}
             ${RT_TSAN_DYNAMIC}
-            ${RT_LSAN_DYNAMIC})
+            # Unused
+            # ${RT_UBSAN_DYNAMIC}
+            # ${RT_LSAN_DYNAMIC}
+        )
 endif()
 
 message(STATUS "linking to llvm libs ${lld_libs}")

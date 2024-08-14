@@ -178,6 +178,7 @@ static void linker_setup_windows(const char ***args_ref, Linker linker_type)
 		linking_add_link(&compiler.linking, "msvcprt");
 	}
 
+	// Link sanitizer runtime libraries
 	if (compiler.build.feature.sanitize_address)
 	{
 		const char *compiler_path = find_executable_path();
@@ -201,21 +202,6 @@ static void linker_setup_windows(const char ***args_ref, Linker linker_type)
 
 static void linker_setup_macos(const char ***args_ref, Linker linker_type)
 {
-	if (compiler.build.feature.sanitize_address)
-	{
-		const char *compiler_path = find_executable_path();
-		// TODO Only dynamic linking seems to work
-		if (1)
-		{
-			add_arg(file_append_path(compiler_path, "c3c_rt/libclang_rt.asan_osx_dynamic.dylib"));
-			add_arg2("-Wl,-rpath ", file_append_path(compiler_path, "c3c_rt"));
-		}
-		else
-		{
-			add_arg(file_append_path(compiler_path, "c3c_rt/libclang_rt.asan_abi_osx.a"));
-		}
-	}
-
 	if (linker_type == LINKER_CC)
 	{
 		add_arg("-target");
@@ -551,13 +537,6 @@ static bool linker_setup(const char ***args_ref, const char **files_to_link, uns
 			break;
 	}
 
-	if (compiler.platform.os == OS_TYPE_LINUX)
-	{
-		if (compiler.build.feature.sanitize_address) add_arg("-fsanitize=address");
-		if (compiler.build.feature.sanitize_memory) add_arg("-fsanitize=memory");
-		if (compiler.build.feature.sanitize_thread) add_arg("-fsanitize=thread");
-	}
-
 	for (unsigned i = 0; i < file_count; i++)
 	{
 		add_arg(files_to_link[i]);
@@ -579,6 +558,33 @@ static bool linker_setup(const char ***args_ref, const char **files_to_link, uns
 		add_linked_libs(args_ref, target->linked_libs, use_win);
 	}
 	add_linked_libs(args_ref, linking->links, use_win);
+
+	// Link sanitizer runtime libraries
+	if (compiler.platform.os == OS_TYPE_MACOSX)
+	{
+		if (compiler.build.feature.sanitize_address || compiler.build.feature.sanitize_thread)
+		{
+			const char *compiler_path = find_executable_path();
+			if (compiler.build.feature.sanitize_address)
+			{
+				add_arg(file_append_path(compiler_path, "c3c_rt/libclang_rt.asan_osx_dynamic.dylib"));
+			}
+			if (compiler.build.feature.sanitize_thread)
+			{
+				add_arg(file_append_path(compiler_path, "c3c_rt/libclang_rt.tsan_osx_dynamic.dylib"));
+			}
+
+			// Add rpath for sanitizer runtime libraries last, after user-provided link args have been added.
+			add_arg2("-Wl,-rpath ", file_append_path(compiler_path, "c3c_rt"));
+		}
+	}
+	else if (compiler.platform.os == OS_TYPE_LINUX)
+	{
+		if (compiler.build.feature.sanitize_address) add_arg("-fsanitize=address");
+		if (compiler.build.feature.sanitize_memory) add_arg("-fsanitize=memory");
+		if (compiler.build.feature.sanitize_thread) add_arg("-fsanitize=thread");
+	}
+
 	return true;
 }
 #undef add_arg2
