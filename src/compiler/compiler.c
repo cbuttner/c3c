@@ -1092,6 +1092,8 @@ static void check_sanitizer_options(BuildTarget *target)
 					// We currently don't have ASan runtime libraries linked against debug CRT.
 					error_exit("Address sanitizer cannot be used when using `static-debug` or `dynamic-debug` for `wincrt`. Please use `static` or `debug` instead.");
 				}
+
+				WARNING("Using address sanitizer on Windows requires the sanitizer option `detect_odr_violation=0`, either set by returning it from `__asan_default_options`, or via an environment variable `ASAN_OPTIONS=detect_odr_violation=0`");
 				break;
 			}
 			case LINUX_X86:
@@ -1108,7 +1110,7 @@ static void check_sanitizer_options(BuildTarget *target)
 		}
 		if (target->type == TARGET_TYPE_BENCHMARK)
 		{
-			eprintf("WARNING: Running benchmarks with address sanitizer enabled!\n");
+			WARNING("Running benchmarks with address sanitizer enabled!");
 		}
 	}
 	if (target->feature.sanitize_memory)
@@ -1136,7 +1138,7 @@ static void check_sanitizer_options(BuildTarget *target)
 		}
 		if (target->type == TARGET_TYPE_BENCHMARK)
 		{
-			eprintf("WARNING: Running benchmarks with memory sanitizer enabled!\n");
+			WARNING("Running benchmarks with memory sanitizer enabled!");
 		}
 	}
 	if (target->feature.sanitize_thread)
@@ -1159,7 +1161,7 @@ static void check_sanitizer_options(BuildTarget *target)
 		}
 		if (target->type == TARGET_TYPE_BENCHMARK)
 		{
-			eprintf("WARNING: Running benchmarks with thread sanitizer enabled!\n");
+			WARNING("Running benchmarks with thread sanitizer enabled!");
 		}
 	}
 }
