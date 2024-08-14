@@ -1250,7 +1250,7 @@ const char *scratch_buffer_interned_as(TokenType* type)
 void scratch_buffer_append_native_safe_path(const char *data, int len)
 {
 #if PLATFORM_WINDOWS
-	scratch_buffer_append("\"\"");
+	scratch_buffer_append("\"");
 	for (int i = 0; i < len; i++)
 	{
 		char c = data[i];
@@ -1258,17 +1258,14 @@ void scratch_buffer_append_native_safe_path(const char *data, int len)
 		{
 			case '/':
 			case '\\':
-				scratch_buffer_append("\\\\");
-				break;
-			case '"':
-				scratch_buffer_append("\\\"");
+				scratch_buffer_append("\\");
 				break;
 			default:
 				scratch_buffer_append_char(c);
 				break;
 		}
 	}
-	scratch_buffer_append("\"\"");
+	scratch_buffer_append("\"");
 #else
 	scratch_buffer_append_len(data, len);
 #endif
@@ -1283,6 +1280,7 @@ File *compile_and_invoke(const char *file, const char *args, const char *stdin_d
 	}
 	const char *compiler_path = file_append_path(find_executable_path(), name);
 
+	if (PLATFORM_WINDOWS) scratch_buffer_append_char('"');
 	scratch_buffer_append_native_safe_path(compiler_path, strlen(compiler_path));
 	const char *output = "__c3exec__";
 	scratch_buffer_append(" compile -g0 --single-module=yes");
@@ -1296,7 +1294,7 @@ File *compile_and_invoke(const char *file, const char *args, const char *stdin_d
 	}
 	scratch_buffer_printf(" -o %s", output);
 	const char *out;
-	puts(scratch_buffer_to_string());
+	if (PLATFORM_WINDOWS) scratch_buffer_append_char('"');
 	if (!execute_cmd_failable(scratch_buffer_to_string(), &out, NULL))
 	{
 		error_exit("Failed to compile script '%s'.", file);
