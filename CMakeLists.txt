@@ -465,7 +465,7 @@ if (DEFINED sanitizer_runtime_libraries)
             VERBATIM)
     endif()
 
-    install(DIRECTORY c3c_rt/ DESTINATION bin/c3c_rt)
+    install(DIRECTORY $<TARGET_FILE_DIR:c3c>/c3c_rt/ DESTINATION bin/c3c_rt)
 endif()
 
 feature_summary(WHAT ALL)
