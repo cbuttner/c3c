@@ -1250,7 +1250,7 @@ const char *scratch_buffer_interned_as(TokenType* type)
 void scratch_buffer_append_native_safe_path(const char *data, int len)
 {
 #if PLATFORM_WINDOWS
-	scratch_buffer_append_char('"');
+	scratch_buffer_append("\"\"");
 	for (int i = 0; i < len; i++)
 	{
 		char c = data[i];
@@ -1268,7 +1268,7 @@ void scratch_buffer_append_native_safe_path(const char *data, int len)
 				break;
 		}
 	}
-	scratch_buffer_append_char('"');
+	scratch_buffer_append("\"\"");
 #else
 	scratch_buffer_append_len(data, len);
 #endif
@@ -1282,6 +1282,7 @@ File *compile_and_invoke(const char *file, const char *args, const char *stdin_d
 		error_exit("Failed to extract file name from '%s'", compiler_exe_name);
 	}
 	const char *compiler_path = file_append_path(find_executable_path(), name);
+
 	scratch_buffer_append_native_safe_path(compiler_path, strlen(compiler_path));
 	const char *output = "__c3exec__";
 	scratch_buffer_append(" compile -g0 --single-module=yes");
