@@ -1247,6 +1247,33 @@ const char *scratch_buffer_interned_as(TokenType* type)
 	                  fnv1a(scratch_buffer.str, scratch_buffer.len), type);
 }
 
+void scratch_buffer_append_native_safe_path(const char *data, int len)
+{
+#if PLATFORM_WINDOWS
+	scratch_buffer_append_char('"');
+	for (int i = 0; i < len; i++)
+	{
+		char c = data[i];
+		switch (c)
+		{
+			case '/':
+			case '\\':
+				scratch_buffer_append("\\\\");
+				break;
+			case '"':
+				scratch_buffer_append("\\\"");
+				break;
+			default:
+				scratch_buffer_append_char(c);
+				break;
+		}
+	}
+	scratch_buffer_append_char('"');
+#else
+	scratch_buffer_append_len(data, len);
+#endif
+}
+
 File *compile_and_invoke(const char *file, const char *args, const char *stdin_data)
 {
 	char *name;
@@ -1255,31 +1282,20 @@ File *compile_and_invoke(const char *file, const char *args, const char *stdin_d
 		error_exit("Failed to extract file name from '%s'", compiler_exe_name);
 	}
 	const char *compiler_path = file_append_path(find_executable_path(), name);
-	scratch_buffer_printf("\"%s\"", compiler_path);
-#if PLATFORM_WINDOWS
-	file_path_convert_to_win_separator(scratch_buffer_to_string());
-	const char *output = "__c3exec__.exe";
-#else
+	scratch_buffer_append_native_safe_path(compiler_path, strlen(compiler_path));
 	const char *output = "__c3exec__";
-#endif
 	scratch_buffer_append(" compile -g0 --single-module=yes");
 	StringSlice slice = slice_from_string(file);
 	while (slice.len > 0)
 	{
 		StringSlice file_name = slice_next_token(&slice, ';');
 		if (!file_name.len) continue;
-		scratch_buffer_append(" \"");
-		char *start = &scratch_buffer.str[scratch_buffer.len];
-		(void)start;
-		scratch_buffer_append_len(file_name.ptr, file_name.len);
-		scratch_buffer_to_string();
-#if PLATFORM_WINDOWS
-		file_path_convert_to_win_separator(start);
-#endif
-		scratch_buffer_append("\"");
+		scratch_buffer_append(" ");
+		scratch_buffer_append_native_safe_path(file_name.ptr, file_name.len);
 	}
 	scratch_buffer_printf(" -o %s", output);
 	const char *out;
+	puts(scratch_buffer_to_string());
 	if (!execute_cmd_failable(scratch_buffer_to_string(), &out, NULL))
 	{
 		error_exit("Failed to compile script '%s'.", file);
