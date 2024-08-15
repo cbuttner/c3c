@@ -1084,13 +1084,13 @@ static void check_sanitizer_options(BuildTarget *target)
 				WinCrtLinking crt_linking = target->win.crt_linking;
 				if (crt_linking == WIN_CRT_DEFAULT)
 				{
-					error_exit("Please specify `static` or `debug` for `wincrt` when using address sanitizer.");
+					error_exit("Please specify `static` or `dynamic` for `wincrt` when using address sanitizer.");
 				}
 
 				if (crt_linking == WIN_CRT_STATIC_DEBUG || crt_linking == WIN_CRT_DYNAMIC_DEBUG)
 				{
 					// We currently don't have ASan runtime libraries linked against debug CRT.
-					error_exit("Address sanitizer cannot be used when using `static-debug` or `dynamic-debug` for `wincrt`. Please use `static` or `debug` instead.");
+					error_exit("Address sanitizer cannot be used when using `static-debug` or `dynamic-debug` for `wincrt`. Please use `static` or `dynamic` instead.");
 				}
 
 				WARNING("Using address sanitizer on Windows requires the sanitizer option `detect_odr_violation=0`, either set by returning it from `__asan_default_options`, or via an environment variable `ASAN_OPTIONS=detect_odr_violation=0`");

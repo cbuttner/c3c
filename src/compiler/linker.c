@@ -38,7 +38,7 @@ static const char *ld_target(ArchType arch_type)
 
 }
 
-static void linker_setup_windows(const char ***args_ref, Linker linker_type)
+static void linker_setup_windows(const char ***args_ref, Linker linker_type, const char *output_file)
 {
 	add_arg(compiler.build.win.use_win_subsystem ? "/SUBSYSTEM:WINDOWS" : "/SUBSYSTEM:CONSOLE");
 	if (link_libc()) linking_add_link(&compiler.linking, "dbghelp");
@@ -130,6 +130,37 @@ static void linker_setup_windows(const char ***args_ref, Linker linker_type)
 		add_arg(str_printf("/LIBPATH:%s", windows_sdk->windows_sdk_ucrt_library_path));
 		add_arg(str_printf("/LIBPATH:%s", windows_sdk->vs_library_path));
 	}
+
+	// Link sanitizer runtime libraries
+	const char *compiler_path = find_executable_path();
+	const char *asan_dll_src_path = file_append_path(compiler_path, "c3c_rt/clang_rt.asan_dynamic-x86_64.dll");
+	const char *output_dir = "";
+	if (compiler.build.output_dir)
+	{
+		output_dir = compiler.build.output_dir;
+	}
+	else
+	{
+		char *filename;
+		file_namesplit(output_file, &filename, (char**)&output_dir);
+	}
+	const char *asan_dll_dst_path = file_append_path(output_dir, "clang_rt.asan_dynamic-x86_64.dll");
+	file_delete_file(asan_dll_dst_path);
+	if (compiler.build.feature.sanitize_address)
+	{
+		if (compiler.build.win.crt_linking == WIN_CRT_STATIC)
+		{
+			add_arg2(compiler_path, "c3c_rt/clang_rt.asan-x86_64.lib");
+		}
+		else
+		{
+			add_arg2(compiler_path, "c3c_rt/clang_rt.asan_dynamic-x86_64.lib");
+			add_arg2(compiler_path, "c3c_rt/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib");
+			DEBUG_LOG("Copying '%s' to '%s'\n", asan_dll_src_path, asan_dll_dst_path);
+			file_copy_file(asan_dll_src_path, asan_dll_dst_path, true);
+		}
+	}
+
 	linking_add_link(&compiler.linking, "kernel32");
 	linking_add_link(&compiler.linking, "ntdll");
 	linking_add_link(&compiler.linking, "user32");
@@ -176,27 +207,6 @@ static void linker_setup_windows(const char ***args_ref, Linker linker_type)
 		linking_add_link(&compiler.linking, "vcruntime");
 		linking_add_link(&compiler.linking, "msvcrt");
 		linking_add_link(&compiler.linking, "msvcprt");
-	}
-
-	// Link sanitizer runtime libraries
-	const char *compiler_path = find_executable_path();
-	const char *asan_dll_src_path = file_append_path(compiler_path, "c3c_rt/clang_rt.asan_dynamic-x86_64.dll");
-	const char *asan_dll_dst_path = file_append_path(compiler.build.output_dir, "clang_rt.asan_dynamic-x86_64.dll");
-	file_delete_file(asan_dll_dst_path);
-
-	if (compiler.build.feature.sanitize_address)
-	{
-		if (compiler.build.win.crt_linking == WIN_CRT_STATIC)
-		{
-			add_arg2(compiler_path, "c3c_rt/clang_rt.asan-x86_64.lib");
-		}
-		else
-		{
-			add_arg2(compiler_path, "c3c_rt/clang_rt.asan_dynamic-x86_64.lib");
-			add_arg2(compiler_path, "c3c_rt/clang_rt.asan_dynamic_runtime_thunk-x86_64.lib");
-			DEBUG_LOG("Copying '%s' to '%s'\n", asan_dll_src_path, asan_dll_dst_path);
-			file_copy_file(asan_dll_src_path, asan_dll_dst_path, true);
-		}
 	}
 
 	add_arg("/NOLOGO");
@@ -511,7 +521,7 @@ static bool linker_setup(const char ***args_ref, const char **files_to_link, uns
 		case OS_UNSUPPORTED:
 			UNREACHABLE
 		case OS_TYPE_WIN32:
-			linker_setup_windows(args_ref, linker_type);
+			linker_setup_windows(args_ref, linker_type, output_file);
 			break;
 		case OS_TYPE_MACOSX:
 			linker_setup_macos(args_ref, linker_type);
