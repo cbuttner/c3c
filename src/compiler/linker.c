@@ -587,7 +587,8 @@ static bool linker_setup(const char ***args_ref, const char **files_to_link, uns
 			}
 
 			// Add rpath for sanitizer runtime libraries last, after user-provided link args have been added.
-			add_arg2("-Wl,-rpath ", file_append_path(compiler_path, "c3c_rt"));
+			add_arg("-rpath");
+			add_arg(file_append_path(compiler_path, "c3c_rt"));
 		}
 	}
 	else if (compiler.platform.os == OS_TYPE_LINUX)
@@ -788,7 +789,9 @@ void platform_linker(const char *output_file, const char **files, unsigned file_
 	{
 		// Create .dSYM
 		scratch_buffer_clear();
-		scratch_buffer_printf("dsymutil -arch %s %s", arch_to_linker_arch(compiler.platform.arch), output_file);
+		scratch_buffer_append("dsymutil -arch");
+		scratch_buffer_append_argument(arch_to_linker_arch(compiler.platform.arch));
+		scratch_buffer_append_argument(output_file);
 		if (compiler.build.print_linking) puts(scratch_buffer_to_string());
 		if (system(scratch_buffer_to_string()) != 0)
 		{
